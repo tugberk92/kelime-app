@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#C4532B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kelime">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Kelime — Turkish Tutor</title>
+<link rel="manifest" href='data:application/manifest+json;charset=utf-8,{"name":"Kelime Turkish Tutor","short_name":"Kelime","display":"standalone","background_color":"%23FAF6EF","theme_color":"%23C4532B","start_url":".","icons":[{"src":"data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 192 192%22%3E%3Crect width=%22192%22 height=%22192%22 rx=%2242%22 fill=%22%23C4532B%22/%3E%3Ctext x=%2296%22 y=%22135%22 font-family=%22Georgia%22 font-size=%22120%22 font-weight=%22700%22 text-anchor=%22middle%22 fill=%22white%22%3EK%3C/text%3E%3C/svg%3E","sizes":"192x192","type":"image/svg+xml"}]}'>
+<link rel="icon" href="data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect width=%22100%22 height=%22100%22 rx=%2222%22 fill=%22%23C4532B%22/%3E%3Ctext x=%2250%22 y=%2270%22 font-family=%22Georgia%22 font-size=%2262%22 font-weight=%22700%22 text-anchor=%22middle%22 fill=%22white%22%3EK%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+    background: #FAF6EF;
+    color: #2D2017;
+    line-height: 1.5;
+    height: 100%;
+    overflow-x: hidden;
+  }
+  #root {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: #FAF6EF;
+    position: relative;
+  }
+  textarea, input, button, select { font-family: inherit; }
+  textarea::placeholder, input::placeholder { color: #8C7B6B; }
+  button { cursor: pointer; border: none; background: none; }
+  textarea, input { font-size: 16px; /* prevents iOS zoom */ }
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40% { transform: translateY(-5px); opacity: 1; }
+  }
+  @keyframes bar {
+    from { transform: scaleY(0.3); }
+    to { transform: scaleY(1); }
+  }
+  @keyframes pulse-ring {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.8); opacity: 0; }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .fade-in { animation: fade-in 0.3s ease; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+// ═══════════════════════════════════════════════════════════════
+// CONTENT & CONFIG
+// ═══════════════════════════════════════════════════════════════
+const SYSTEM_PROMPT_BASE = `You are Kelime, a warm, witty Turkish language tutor teaching a Danish woman who speaks English fluently. She is a beginner (A0-A1).
+
+PERSONALITY:
+- Fun Turkish friend in Istanbul, excited to share the language
+- Humor, cultural context, real-life stories
+- Celebrate small wins. Patient but keep momentum
+
+═══ CRITICAL « » AND ‹ › MARKER RULES — READ CAREFULLY ═══
+The app speaks « » content with a TURKISH voice, ‹ › content with a DANISH voice,
+and everything else with an ENGLISH voice.
+
+✓ PUT « » ONLY around actual Turkish words/phrases that should be heard in Turkish.
+✓ PUT ‹ › ONLY around Danish reference words/letters (e.g. ‹lys›, ‹rose›, ‹ø›, ‹y›)
+   so the user — a Danish speaker — hears them in her own voice as a sound bridge.
+✗ NEVER put « » or ‹ › around:
+  • Pronunciation guides like (mer-HA-ba) — ALWAYS use (parentheses)
+  • English translations — ALWAYS use "double quotes"
+  • English example words — ALWAYS use 'single quotes'
+  • Single Turkish LETTERS when discussing them as letters (e.g., the letter 'ü')
+
+✓ ALWAYS wrap every Turkish WORD in « ». Never write a Turkish word without « ».
+  ✗ WRONG: "Merhaba means hello" → the app reads "Merhaba" in English voice, sounding awful
+  ✓ RIGHT: "«Merhaba» means hello"
+
+═══ TEACHING FORMAT (use this EXACTLY) ═══
+«Turkish phrase» (pronunciation) = "English meaning"
+
+CRITICAL: EVERY SINGLE «Turkish word» MUST be immediately followed by (pronunciation in parentheses). NO EXCEPTIONS. This applies to:
+  • Vocabulary: «Merhaba» (mer-HA-ba) = "Hello"
+  • Full phrases: «Bir çay lütfen» (beer chai LUET-fen) = "One tea please"
+  • Questions: «Nasılsın?» (na-SIL-sın) = "How are you?"
+  • Reactions: «Harika!» (ha-ri-KA) = "Great!"
+  • Short words: «Evet» (e-VET) = "Yes"
+  • Single-syllable words: «Su» (soo) = "Water"
+  • Even when mentioned again later in the same message
+
+The user LOVES seeing the English-style pronunciation hints. It helps her say the words out loud. Always include (pronunciation). If you skip it, she cannot practice speaking.
+
+PRONUNCIATION GUIDE STYLE:
+- Use English-speaker-friendly phonetics, NOT IPA
+- Show stress with CAPITALS on the stressed syllable
+- Use hyphens between syllables
+- Examples:
+  • «teşekkürler» → (te-shek-KUER-ler)
+  • «güzel» → (gue-ZEL)  [note: 'gue' represents the ü sound]
+  • «lütfen» → (LUET-fen)
+  • «çay» → (chai)
+  • «İstanbul» → (is-tan-BOOL)
+
+Examples of CORRECT format:
+  «Merhaba» (mer-HA-ba) = "Hello"
+  «Bir çay lütfen» (beer chai LUET-fen) = "One tea please"
+  Turkish 'ü' sounds like Danish 'y' in 'lys' — try saying «güzel» (gue-ZEL) = "beautiful"
+  «Aferin!» (a-fe-RIN) = "Well done!"
+
+Examples of WRONG (do NOT do this):
+  ✗ Writing «Harika!» without (ha-ri-KA) after it — pronunciation is MANDATORY
+  ✗ «Merhaba» means «hello» — English never goes in « »
+  ✗ The «ü» sound is like Danish «y» — single letters don't go in « »
+  ✗ Try saying Merhaba — Turkish without « » wrappers is wrong
+
+═══ CRITICAL: SPEAK TURKISH, NOT JUST ABOUT TURKISH ═══
+Your replies MUST mix two voices like a real bilingual friend:
+
+ROLE 1 — TEACHER (English):
+- Explain grammar, culture, meaning
+- Give memory tips and Danish sound bridges
+- Correct gently
+
+ROLE 2 — NATIVE SPEAKER (Turkish, in « »):
+- Greet, react, and question in Turkish
+- React naturally: «Harika!», «Çok güzel!», «Aferin!», «Tabii ki!»
+- ASK HER QUESTIONS IN TURKISH so she builds listening comprehension
+- In scenarios, stay in character speaking Turkish
+
+EVERY message MUST end with a question asked IN TURKISH (wrapped in « »).
+Optionally follow with an English hint in parentheses so she's not lost.
+
+GOOD EXAMPLE:
+"«Merhaba» (mer-HA-ba) = "Hello" — used any time of day, stress on HA.
+Fun fact: Turks shake hands with strangers but kiss cheeks with friends — twice!
+
+Now I'll ask in Turkish, listen carefully:
+«Sen nasılsın?» (sen na-SIL-sın) = "How are you?"
+Try answering with: «İyiyim» (ee-YEE-yim) = "I am good""
+
+Notice how EVERY Turkish word has pronunciation in parentheses. Never skip this.
+
+BAD EXAMPLE (too English-heavy — DO NOT DO THIS):
+"Merhaba means hello in Turkish! Can you try saying it back to me?"
+↑ This wastes the chance for her to LISTEN to Turkish.
+
+═══ TEACHING METHOD ═══
+- Introduce 2-3 new words MAX per message
+- Give a cultural hook or memory tip for every new word
+- Bridge to Danish sounds with ‹ › so she HEARS the Danish word: Turkish 'ü' = Danish ‹y› in ‹lys›, Turkish 'ö' = Danish ‹ø›, Turkish 'ı' ≈ unstressed Danish 'e' in ‹e›
+- Keep English explanations SHORT (one or two sentences). Let the « » Turkish and ‹ › Danish do the heavy lifting — long English narration kills the rhythm of voice mode.
+
+═══ VOICE MODE RULES ═══
+- Keep messages SHORT (3-5 sentences) since she's LISTENING
+- Natural flowing text — no bullets, no markdown, no headers
+- Every message ends with a Turkish question she can answer by speaking
+
+═══ CORRECTION STYLE ═══
+If she responds in Turkish:
+- Correct: react in Turkish first, then explain: "«Aferin!» Your vowel harmony is perfect!"
+- Wrong: model the right form kindly: "«Az kaldı!» (almost!) — it should be «Ben iyiyim» (ben ee-yee-yim). You had the idea right!"
+- If speech recognition garbled her Turkish, assume intended meaning generously
+
+═══ SCENARIO MODE ═══
+- Stay in character speaking Turkish (waiter, shopkeeper, taxi driver)
+- Break character briefly in [brackets] only to clarify when she's stuck
+- Ask what she wants, react to her answers, keep the scene moving in Turkish`;
+
+const IMMERSION_MODES = {
+  light: {
+    label: "🐣 Easy",
+    sub: "Mostly English",
+    instruction: "\n\n═══ IMMERSION: LIGHT ═══\nShe is just starting. Use MOSTLY English with Turkish vocabulary examples. End each message with a SHORT Turkish question (3-4 words) like «Nasılsın?» or «Anladın mı?» — always with an English hint after. She needs heavy scaffolding right now.",
+  },
+  balanced: {
+    label: "🌱 Balanced",
+    sub: "Mix of both",
+    instruction: "\n\n═══ IMMERSION: BALANCED (default) ═══\nFollow the guidance above. Explain in English, ask questions in Turkish. Every response ends with a Turkish question (can be a full sentence). Scenario roleplay runs ~60-70% Turkish.",
+  },
+  immersive: {
+    label: "🔥 Immersive",
+    sub: "Mostly Turkish",
+    instruction: "\n\n═══ IMMERSION: HIGH ═══\nShe wants a challenge! Speak MORE Turkish — react, narrate, and ask in Turkish. Use English ONLY for grammar explanations and when she asks what something means. In scenarios, speak ~90% Turkish. Real immersion mode.",
+  },
+};
+
+function buildSystemPrompt(immersion) {
+  return SYSTEM_PROMPT_BASE + (IMMERSION_MODES[immersion]?.instruction || IMMERSION_MODES.balanced.instruction);
+}
+
+const SCENARIOS = [
+  { id: "free", icon: "💬", title: "Free Chat", sub: "Learn naturally", color: "#1B6B5A", prompt: null },
+  { id: "cafe", icon: "☕", title: "At the Café", sub: "Order çay", color: "#C4532B", prompt: "Roleplay: I'm at a Turkish çay bahçesi. You're the waiter. Greet me in Turkish, suggest what I should try saying. Keep short for voice. Use « » around all Turkish." },
+  { id: "market", icon: "🛒", title: "At the Bazaar", sub: "Shop & bargain", color: "#7B5EA7", prompt: "Roleplay: I'm at the Grand Bazaar. You're a shopkeeper. Greet me, show something, tell me what to try saying. Short for voice. Use « » around all Turkish." },
+  { id: "meet", icon: "🤝", title: "Meet Someone", sub: "Introductions", color: "#2E7D9B", prompt: "Roleplay: We just met at a party in Istanbul. Introduce yourself in Turkish, ask my name, tell me how to respond. Short for voice. Use « » around all Turkish." },
+  { id: "taxi", icon: "🚕", title: "In a Taxi", sub: "Directions", color: "#D4A843", prompt: "Roleplay: I'm in a taxi going to Sultanahmet. You're the driver. Start the conversation, tell me what to say. Short for voice. Use « » around all Turkish." },
+  { id: "pron", icon: "🗣️", title: "Pronunciation", sub: "Danish × Turkish sounds", color: "#1B6B5A", prompt: "Help me with Turkish pronunciation! I'm Danish so I know ø, y, å. Start with the most useful tricky sound, bridge to Danish, give words to practice. Short for voice. Use « » around all Turkish." },
+  { id: "grammar", icon: "🧩", title: "Grammar Chat", sub: "Suffixes & word order", color: "#C4532B", prompt: "Teach me one Turkish grammar concept through examples. Most useful for a beginner. Intuitive. Short for voice. Use « » around all Turkish." },
+  { id: "culture", icon: "🇹🇷", title: "Culture & Phrases", sub: "Insider knowledge", color: "#8B4513", prompt: "Teach me one real Turkish phrase or cultural thing textbooks skip. Make it insider. Short for voice. Use « » around all Turkish." },
+];
+
+const STARTER = `«Merhaba!» (mer-HA-ba) = "Hello!" I'm Kelime, your Turkish conversation buddy.
+
+As a Danish speaker, you have a huge advantage — your ‹ø› is Turkish 'ö', and your ‹y› is Turkish 'ü'. You already know sounds most English speakers struggle with!
+
+Your first word: «Merhaba» (mer-HA-ba) = "Hello" — used any time of day.
+
+Now let me ask you in Turkish, listen carefully:
+«Sen nasılsın?» (sen na-SIL-sın) = "How are you?"
+Try answering with: «İyiyim» (ee-YEE-yim) = "I am good"`;
+
+// ═══════════════════════════════════════════════════════════════
+// CAPABILITIES & VOICES
+// ═══════════════════════════════════════════════════════════════
+const SR_CLASS = window.SpeechRecognition || window.webkitSpeechRecognition;
+const HAS_SR = !!SR_CLASS;
+const HAS_SS = !!window.speechSynthesis;
+const HAS_MEDIA = !!(navigator.mediaDevices?.getUserMedia);
+
+// Smart voice scoring — prefers neural/natural voices
+function scoreVoice(v) {
+  const name = v.name.toLowerCase();
+  let score = 0;
+  if (/natural|neural/.test(name)) score += 300;
+  if (/online/.test(name)) score += 150;
+  if (/premium|enhanced/.test(name)) score += 100;
+  if (/google/.test(name)) score += 80;
+  if (/microsoft/.test(name)) score += 50;
+  if (/yelda|selma|ahmet|emel|ezgi|tolga/.test(name)) score += 40; // known Turkish voice names
+  if (/aria|jenny|emma|ryan|guy|andrew/.test(name)) score += 30; // good Microsoft neural English voices
+  if (v.default) score += 20;
+  return score;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STORAGE HELPER
+// ═══════════════════════════════════════════════════════════════
+const store = {
+  get: (k, d = null) => {
+    try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); }
+    catch { return d; }
+  },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del: (k) => { try { localStorage.removeItem(k); } catch {} },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// TTS HELPERS
+// ═══════════════════════════════════════════════════════════════
+// Splits text into TR (« »), DA (‹ ›), and EN segments. Adjacent same-language
+// fragments get merged so the TTS engine speaks them as one utterance — this
+// removes the audible "stutter" gap between back-to-back English phrases.
+function parseSegments(text) {
+  const out = [];
+  const re = /«([^»]*)»|‹([^›]*)›/g;
+  let last = 0, m;
+  const push = (lang, t) => {
+    if (!t || !t.trim()) return;
+    const tail = out[out.length - 1];
+    if (tail && tail.lang === lang) tail.text += " " + t;
+    else out.push({ lang, text: t });
+  };
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) push("en", text.slice(last, m.index));
+    if (m[1] !== undefined) push("tr", m[1]);
+    else if (m[2] !== undefined) push("da", m[2]);
+    last = re.lastIndex;
+  }
+  if (last < text.length) push("en", text.slice(last));
+  return out;
+}
+
+function cleanEn(text) {
+  let r = text;
+  // Remove anything in parentheses — covers (mer-HA-ba), (pronunciation notes), etc.
+  r = r.replace(/\([^)]*\)/g, "");
+  r = r.replace(/\[[^\]]*\]/g, "");
+  // Remove = "..." or = '...' patterns (straight + curly quotes), the teaching translation
+  r = r.replace(/=\s*["'“”‘’«»][^"'“”‘’«»]*["'“”‘’«»]/g, "");
+  // Remove standalone = followed by a single word/phrase up to a delimiter
+  r = r.replace(/=\s*[^.,!?;:\n]+/g, "");
+  // Remove "means \"X\"" / "means 'X'" patterns
+  r = r.replace(/\s*means?\s+["'“”‘’][^"'“”‘’]{1,40}["'“”‘’]/gi, "");
+  r = r.replace(/\s*which means?\s+["'“”‘’][^"'“”‘’]{1,40}["'“”‘’]/gi, "");
+  // Remove "pronounced X-X-X" patterns (hyphenated phonetic guide)
+  r = r.replace(/\s*pronounced\s+[\w-]+/gi, "");
+  // Drop quoted Danish/English reference words like 'lys', 'rose' from EN voice —
+  // when they need to be spoken, the model wraps them in ‹ › (Danish voice).
+  r = r.replace(/['‘’]([a-zA-ZæøåÆØÅ]{1,12})['‘’]/g, "");
+  // Remove filler scaffolding that adds zero teaching value out loud
+  r = r.replace(/\b(?:in (?:Turkish|Danish|English))\b/gi, "");
+  r = r.replace(/\b(?:like (?:I said|we said))\b/gi, "");
+  r = r.replace(/\b(?:try saying|let'?s try|let me|let'?s)\s+/gi, "");
+  r = r.replace(/\b(?:listen carefully|listen)\s*[:,]?\s*/gi, "");
+  r = r.replace(/\bnow\s+(?:I'?ll|I will|let'?s)\s+(?:ask|try)\b[^.!?]*[.!?]/gi, "");
+  // Remove hyphenated phonetic guides anywhere (e.g., "mer-HA-ba")
+  r = r.replace(/\b[A-Za-zçşğıöüâÇŞĞIÖÜÂ]+(-[A-Za-zçşğıöüâÇŞĞIÖÜÂ]+){1,}\b/g, (m) => {
+    return /[A-ZÇŞĞIÖÜÂ]{2,}/.test(m) ? "" : m;
+  });
+  // Clean up leftover whitespace and orphaned punctuation
+  r = r.replace(/\s+/g, " ");
+  r = r.replace(/\s+([,.!?:;])/g, "$1");
+  r = r.replace(/[,:;]\s*[,.!?:;]/g, ".");
+  r = r.replace(/\.{2,}/g, ".");
+  r = r.replace(/^[\s,.!?;:\-—–]+/, "");
+  r = r.replace(/[\s,;:\-—–]+$/, "");
+  return r.trim();
+}
+
+function speakSegments(segments, rate, trVoice, enVoice, daVoice, onSegment, onDone) {
+  if (!HAS_SS || segments.length === 0) { onDone?.(); return; }
+  window.speechSynthesis.cancel();
+  let i = 0;
+  const next = () => {
+    if (i >= segments.length) { onDone?.(); return; }
+    const seg = segments[i++];
+    let text;
+    if (seg.lang === "tr") text = seg.text.trim();
+    else if (seg.lang === "da") text = seg.text.trim();
+    else text = cleanEn(seg.text);
+    // Skip empty / punctuation-only / single-character segments — these cause audible glitches
+    if (!text || text.length < 2 || !/[a-zA-ZçşğıöüâÇŞĞIÖÜÂæøåÆØÅ]/.test(text)) return next();
+    const utt = new SpeechSynthesisUtterance(text);
+    if (seg.lang === "tr") {
+      utt.lang = "tr-TR";
+      utt.rate = rate;
+      if (trVoice) utt.voice = trVoice;
+    } else if (seg.lang === "da") {
+      utt.lang = "da-DK";
+      utt.rate = rate; // Danish reference words deserve the same careful pace as Turkish
+      if (daVoice) utt.voice = daVoice;
+      else if (enVoice) utt.voice = enVoice; // fallback — better than no voice
+    } else {
+      utt.lang = "en-US";
+      // English carries the explanation — speak it noticeably faster so the
+      // Turkish/Danish demo words breathe and the rhythm stays musical.
+      utt.rate = Math.min(rate + 0.30, 1.15);
+      if (enVoice) utt.voice = enVoice;
+    }
+    utt.pitch = 1.0;
+    utt.onstart = () => onSegment?.(seg.lang);
+    utt.onend = next;
+    utt.onerror = next;
+    window.speechSynthesis.speak(utt);
+  };
+  next();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MESSAGE CONTENT (tap-to-hear)
+// ═══════════════════════════════════════════════════════════════
+function MessageContent({ text, trVoice, daVoice, rate }) {
+  const [playing, setPlaying] = useState(-1);
+  const parts = [];
+  const re = /«([^»]*)»|‹([^›]*)›/g;
+  let last = 0, m, k = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push({ type: "text", content: text.slice(last, m.index), k: k++ });
+    if (m[1] !== undefined) parts.push({ type: "tr", content: m[1], k: k++ });
+    else if (m[2] !== undefined) parts.push({ type: "da", content: m[2], k: k++ });
+    last = re.lastIndex;
+  }
+  if (last < text.length) parts.push({ type: "text", content: text.slice(last), k: k++ });
+
+  const tap = (word, type, key) => {
+    if (!HAS_SS) return;
+    window.speechSynthesis.cancel();
+    setPlaying(key);
+    const utt = new SpeechSynthesisUtterance(word);
+    if (type === "da") {
+      utt.lang = "da-DK";
+      if (daVoice) utt.voice = daVoice;
+    } else {
+      utt.lang = "tr-TR";
+      if (trVoice) utt.voice = trVoice;
+    }
+    utt.rate = rate;
+    utt.onend = () => setPlaying(-1);
+    utt.onerror = () => setPlaying(-1);
+    window.speechSynthesis.speak(utt);
+  };
+  return (
+    <span>
+      {parts.map(p => {
+        if (p.type === "text") return <span key={p.k}>{p.content}</span>;
+        const on = playing === p.k;
+        const isDa = p.type === "da";
+        return (
+          <span key={p.k} onClick={e => { e.stopPropagation(); tap(p.content, p.type, p.k); }}
+            style={{
+              background: on ? "#D4EDE7" : (isDa ? "#E8EEF8" : "#FFF4E8"),
+              color: on ? "#1B6B5A" : (isDa ? "#2E5BA8" : "#B8441F"),
+              padding: "2px 7px", borderRadius: 6, fontWeight: 600,
+              cursor: "pointer",
+              borderBottom: `2px dotted ${isDa ? "rgba(46,91,168,0.5)" : "rgba(212,168,67,0.5)"}`,
+              transition: "all 0.2s", whiteSpace: "nowrap",
+            }} title={isDa ? "Tap to hear (Danish)" : "Tap to hear (Turkish)"}>
+            {p.content}<span style={{ fontSize: 10, marginLeft: 3, opacity: 0.5 }}>🔊</span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODEL OPTIONS
+// ═══════════════════════════════════════════════════════════════
+const ANTHROPIC_MODELS = {
+  "claude-haiku-4-5-20251001": {
+    label: "Haiku 4.5",
+    badge: "💰 Cheapest",
+    desc: "Fast, sharp at format. Best value for daily use.",
+    estCost: "~$3-5/month",
+    color: "#1B6B5A",
+  },
+  "claude-sonnet-4-6": {
+    label: "Sonnet 4.6",
+    badge: "⭐ Sweet spot",
+    desc: "Best balance. Higher quality reasoning, still fast.",
+    estCost: "~$8-12/month",
+    color: "#C4532B",
+  },
+  "claude-opus-4-7": {
+    label: "Opus 4.7",
+    badge: "🏆 Top",
+    desc: "Most capable but slow. Probably overkill for tutoring.",
+    estCost: "~$15-20/month",
+    color: "#7B5EA7",
+  },
+};
+const DEFAULT_ANTHROPIC_MODEL = "claude-haiku-4-5-20251001";
+
+// ═══════════════════════════════════════════════════════════════
+// API CALLS — supports Google Gemini (free) & Anthropic (paid)
+// ═══════════════════════════════════════════════════════════════
+async function callAI(provider, apiKey, messages, immersion, anthropicModel) {
+  if (provider === "gemini") return callGemini(apiKey, messages, immersion);
+  return callAnthropic(apiKey, messages, immersion, anthropicModel);
+}
+
+async function callGemini(apiKey, messages, immersion) {
+  const contents = messages
+    .filter(m => m.role === "user" || m.role === "assistant")
+    .map(m => ({
+      role: m.role === "assistant" ? "model" : "user",
+      parts: [{ text: m.text }],
+    }));
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents,
+        systemInstruction: { parts: [{ text: buildSystemPrompt(immersion) }] },
+        generationConfig: { maxOutputTokens: 800, temperature: 0.85 },
+      }),
+    }
+  );
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini API ${res.status}: ${err.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.map(p => p.text || "").join("") || "";
+}
+
+async function callAnthropic(apiKey, messages, immersion, model) {
+  const apiMsgs = messages
+    .filter(m => m.role === "user" || m.role === "assistant")
+    .map(m => ({ role: m.role, content: m.text }));
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: model || DEFAULT_ANTHROPIC_MODEL,
+      max_tokens: 600,
+      system: buildSystemPrompt(immersion),
+      messages: apiMsgs,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Anthropic API ${res.status}: ${err.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  return data.content?.map(b => b.text || "").join("") || "";
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════════════════════
+function App() {
+  const [screen, setScreen] = useState("home");
+  const [provider, setProvider] = useState(() => store.get("kelime-provider", "gemini"));
+  const [apiKey, setApiKey] = useState(() => store.get(`kelime-apikey-${store.get("kelime-provider", "gemini")}`, ""));
+  const [scenario, setScenario] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [speakingLang, setSpeakingLang] = useState(null);
+  const [transcript, setTranscript] = useState("");
+  const [listenLang, setListenLang] = useState(() => store.get("kelime-listen-lang", "en-US"));
+  const [autoSpeak, setAutoSpeak] = useState(() => store.get("kelime-autospeak", true));
+  const [speechRate, setSpeechRate] = useState(() => store.get("kelime-rate", 0.85));
+  const [immersion, setImmersion] = useState(() => store.get("kelime-immersion", "balanced"));
+  const [anthropicModel, setAnthropicModel] = useState(() => store.get("kelime-anthropic-model", DEFAULT_ANTHROPIC_MODEL));
+  const [micStatus, setMicStatus] = useState("unknown");
+  const [micError, setMicError] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
+  const [showTRKeys, setShowTRKeys] = useState(false);
+  const [apiError, setApiError] = useState("");
+
+  const [trVoices, setTrVoices] = useState([]);
+  const [enVoices, setEnVoices] = useState([]);
+  const [daVoices, setDaVoices] = useState([]);
+  const [selectedTrVoice, setSelectedTrVoice] = useState(() => store.get("kelime-trvoice", null));
+  const [selectedEnVoice, setSelectedEnVoice] = useState(() => store.get("kelime-envoice", null));
+  const [selectedDaVoice, setSelectedDaVoice] = useState(() => store.get("kelime-davoice", null));
+
+  const [stats, setStats] = useState(() => store.get("kelime-stats", { sessions: 0, streak: 0, lastDate: null }));
+
+  const chatEndRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const trVoice = trVoices.find(v => v.name === selectedTrVoice) || trVoices[0] || null;
+  const enVoice = enVoices.find(v => v.name === selectedEnVoice) || enVoices[0] || null;
+  const daVoice = daVoices.find(v => v.name === selectedDaVoice) || daVoices[0] || null;
+
+  // Load voices
+  useEffect(() => {
+    if (!HAS_SS) return;
+    const load = () => {
+      const all = window.speechSynthesis.getVoices();
+      const trs = all.filter(v => v.lang?.toLowerCase().startsWith("tr")).sort((a, b) => scoreVoice(b) - scoreVoice(a));
+      const ens = all.filter(v => v.lang?.toLowerCase().startsWith("en")).sort((a, b) => scoreVoice(b) - scoreVoice(a));
+      const das = all.filter(v => v.lang?.toLowerCase().startsWith("da")).sort((a, b) => scoreVoice(b) - scoreVoice(a));
+      setTrVoices(trs);
+      setEnVoices(ens);
+      setDaVoices(das);
+      if (trs.length && (!selectedTrVoice || !trs.find(v => v.name === selectedTrVoice))) {
+        setSelectedTrVoice(trs[0].name);
+      }
+      if (ens.length && (!selectedEnVoice || !ens.find(v => v.name === selectedEnVoice))) {
+        setSelectedEnVoice(ens[0].name);
+      }
+      if (das.length && (!selectedDaVoice || !das.find(v => v.name === selectedDaVoice))) {
+        setSelectedDaVoice(das[0].name);
+      }
+    };
+    load();
+    window.speechSynthesis.addEventListener("voiceschanged", load);
+    const t1 = setTimeout(load, 500);
+    const t2 = setTimeout(load, 2000);
+    return () => { window.speechSynthesis.removeEventListener("voiceschanged", load); clearTimeout(t1); clearTimeout(t2); };
+  }, [selectedTrVoice, selectedEnVoice, selectedDaVoice]);
+
+  // Persist prefs
+  useEffect(() => { store.set("kelime-provider", provider); }, [provider]);
+  useEffect(() => { if (apiKey) store.set(`kelime-apikey-${provider}`, apiKey); }, [apiKey, provider]);
+  useEffect(() => { store.set("kelime-listen-lang", listenLang); }, [listenLang]);
+  useEffect(() => { store.set("kelime-autospeak", autoSpeak); }, [autoSpeak]);
+  useEffect(() => { store.set("kelime-rate", speechRate); }, [speechRate]);
+  useEffect(() => { store.set("kelime-immersion", immersion); }, [immersion]);
+  useEffect(() => { store.set("kelime-anthropic-model", anthropicModel); }, [anthropicModel]);
+  useEffect(() => { if (selectedTrVoice) store.set("kelime-trvoice", selectedTrVoice); }, [selectedTrVoice]);
+  useEffect(() => { if (selectedEnVoice) store.set("kelime-envoice", selectedEnVoice); }, [selectedEnVoice]);
+  useEffect(() => { if (selectedDaVoice) store.set("kelime-davoice", selectedDaVoice); }, [selectedDaVoice]);
+  useEffect(() => { store.set("kelime-stats", stats); }, [stats]);
+
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading, transcript]);
+
+  // ── MIC ────────────────────────────────────────────────────
+  // We let SpeechRecognition trigger the permission prompt itself
+  // (calling getUserMedia first then releasing causes a double-prompt issue).
+  // checkMic is only used for the initial diagnostic on the home screen.
+  const checkMic = useCallback(async () => {
+    if (!HAS_SR) { setMicStatus("unavailable"); setMicError("Speech recognition not supported. Use Chrome, Edge, or Safari."); return false; }
+    if (!HAS_MEDIA) { setMicStatus("unavailable"); setMicError("Microphone API not available. If you opened the HTML file directly, use the start-kelime-mac.command (Mac) or start-kelime-windows.bat (Windows) launcher instead."); return false; }
+    // Detect file:// protocol upfront — it usually breaks mic
+    if (window.location.protocol === "file:") {
+      setMicStatus("unavailable");
+      setMicError("⚠️ Running from file:// — mic won't work. Use the launcher: double-click start-kelime-mac.command (Mac) or start-kelime-windows.bat (Windows).");
+      return false;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(t => t.stop());
+      setMicStatus("granted"); setMicError(""); return true;
+    } catch (e) {
+      setMicStatus("denied");
+      if (e.name === "NotAllowedError") setMicError("Microphone blocked. On macOS: System Settings → Privacy & Security → Microphone → enable Chrome. Then click the lock icon in Chrome's address bar → allow microphone.");
+      else if (e.name === "NotFoundError") setMicError("No microphone found.");
+      else setMicError(`Mic error: ${e.message || e.name}`);
+      return false;
+    }
+  }, []);
+
+  const startListening = useCallback(async () => {
+    if (!SR_CLASS) {
+      setMicError("Speech recognition not supported in this browser. Try Chrome, Edge, or Safari.");
+      return;
+    }
+    // Block file:// outright — SpeechRecognition is unreliable there
+    if (window.location.protocol === "file:") {
+      setMicStatus("unavailable");
+      setMicError("⚠️ Mic doesn't work this way. Close this and double-click start-kelime-mac.command (Mac) or start-kelime-windows.bat (Windows) instead.");
+      return;
+    }
+
+    // Pre-flight: confirm mic permission before flipping to "listening". Without this,
+    // SpeechRecognition silently fires onend immediately when permission is denied
+    // and the UI just blinks for a millisecond. Granting via getUserMedia gives us
+    // a clear error path AND warms up the mic so SR.start() doesn't fail cold.
+    setMicError("");
+    setListening("preparing");
+    if (HAS_MEDIA) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(t => t.stop());
+        setMicStatus("granted");
+      } catch (e) {
+        setListening(false);
+        setMicStatus("denied");
+        if (e.name === "NotAllowedError" || e.name === "SecurityError") {
+          setMicError("Microphone blocked. macOS: System Settings → Privacy & Security → Microphone → enable your browser. Then click the lock 🔒 in the address bar → Microphone → Allow.");
+        } else if (e.name === "NotFoundError") {
+          setMicError("No microphone found. Plug one in or check your audio devices.");
+        } else {
+          setMicError(`Mic error: ${e.message || e.name}`);
+        }
+        return;
+      }
+    }
+
+    if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} }
+    window.speechSynthesis?.cancel(); setSpeaking(false);
+
+    const rec = new SR_CLASS();
+    rec.lang = listenLang;
+    // continuous = true so a brief silent pause (Tina thinking before speaking)
+    // doesn't auto-end recognition. She taps ↑ when she's done.
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.maxAlternatives = 1;
+    rec.onstart = () => {
+      setMicStatus("granted");
+      setMicError("");
+      setListening(true);
+    };
+    rec.onresult = (ev) => {
+      let t = "";
+      for (let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript;
+      setTranscript(t);
+    };
+    rec.onend = () => setListening(false);
+    rec.onerror = (ev) => {
+      setListening(false);
+      if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
+        setMicStatus("denied");
+        setMicError("Mic permission denied. macOS: System Settings → Privacy & Security → Microphone → enable your browser. Then click the lock 🔒 in the address bar → Microphone → Allow.");
+      } else if (ev.error === "audio-capture") {
+        setMicError("Can't access microphone. Check macOS System Settings → Privacy & Security → Microphone.");
+      } else if (ev.error === "network") {
+        setMicError("Network error — speech recognition uses Google's servers. Check your internet connection.");
+      } else if (ev.error === "no-speech") {
+        setMicError("Didn't hear anything. Tap the mic and try again — speak right after the pulse appears.");
+      } else if (ev.error !== "aborted") {
+        setMicError(`Recognition error: ${ev.error}`);
+      }
+    };
+    recognitionRef.current = rec;
+    setTranscript("");
+    try {
+      rec.start();
+    } catch (e) {
+      setListening(false);
+      setMicError(`Couldn't start: ${e.message}. Try refreshing the page.`);
+    }
+  }, [listenLang]);
+
+  const stopListening = useCallback(() => { if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} } setListening(false); }, []);
+  const cancelListening = useCallback(() => { if (recognitionRef.current) { try { recognitionRef.current.abort(); } catch {} } setListening(false); setTranscript(""); }, []);
+
+  // ── MESSAGING ──────────────────────────────────────────────
+  const playResponse = useCallback((text) => {
+    if (!autoSpeak || !HAS_SS) return;
+    const segs = parseSegments(text);
+    setSpeaking(true);
+    speakSegments(segs, speechRate, trVoice, enVoice, daVoice,
+      (lang) => setSpeakingLang(lang),
+      () => { setSpeaking(false); setSpeakingLang(null); });
+  }, [autoSpeak, speechRate, trVoice, enVoice, daVoice]);
+
+  const sendMessage = useCallback(async (text) => {
+    if (!text.trim() || loading || !apiKey) return;
+    setApiError("");
+    const updated = [...messages, { role: "user", text: text.trim() }];
+    setMessages(updated); setInput(""); setTranscript("");
+    setLoading(true);
+    try {
+      const reply = await callAI(provider, apiKey, updated, immersion, anthropicModel);
+      setMessages(prev => [...prev, { role: "assistant", text: reply }]);
+      playResponse(reply);
+    } catch (e) {
+      setApiError(e.message);
+      setMessages(prev => [...prev, { role: "assistant", text: `⚠️ Connection issue: ${e.message}. Check your API key in settings.` }]);
+    } finally { setLoading(false); }
+  }, [messages, loading, apiKey, provider, immersion, anthropicModel, playResponse]);
+
+  const sendTranscript = useCallback(() => {
+    stopListening();
+    const t = transcript.trim();
+    if (t) setTimeout(() => sendMessage(t), 150);
+    setTranscript("");
+  }, [transcript, stopListening, sendMessage]);
+
+  const stopSpeaking = useCallback(() => { window.speechSynthesis?.cancel(); setSpeaking(false); setSpeakingLang(null); }, []);
+  const replayMessage = useCallback((text) => {
+    window.speechSynthesis?.cancel();
+    const segs = parseSegments(text);
+    setSpeaking(true);
+    speakSegments(segs, speechRate, trVoice, enVoice, daVoice,
+      (lang) => setSpeakingLang(lang),
+      () => { setSpeaking(false); setSpeakingLang(null); });
+  }, [speechRate, trVoice, enVoice, daVoice]);
+
+  const startScenario = useCallback(async (sc) => {
+    if (!apiKey) { setScreen("setup"); return; }
+    setScenario(sc); setScreen("chat"); setShowTRKeys(false); setShowSettings(false);
+    const today = new Date().toDateString();
+    setStats(prev => {
+      const yest = new Date(Date.now() - 86400000).toDateString();
+      return {
+        ...prev,
+        sessions: prev.sessions + 1,
+        streak: prev.lastDate === today ? prev.streak : (prev.lastDate === yest ? prev.streak + 1 : 1),
+        lastDate: today,
+      };
+    });
+    if (sc.id === "free") { setMessages([{ role: "assistant", text: STARTER }]); playResponse(STARTER); return; }
+    if (sc.prompt) {
+      setMessages([]); setLoading(true);
+      try {
+        const reply = await callAI(provider, apiKey, [{ role: "user", text: sc.prompt }], immersion, anthropicModel);
+        setMessages([{ role: "assistant", text: reply }]);
+        playResponse(reply);
+      } catch (e) {
+        setApiError(e.message);
+        setMessages([{ role: "assistant", text: `⚠️ Connection issue: ${e.message}` }]);
+      } finally { setLoading(false); }
+    }
+  }, [apiKey, provider, immersion, anthropicModel, playResponse]);
+
+  const insertChar = (ch) => { setInput(p => p + ch); inputRef.current?.focus(); };
+
+  const testVoice = (voice, isTurkish) => {
+    if (!HAS_SS) return;
+    window.speechSynthesis.cancel();
+    const text = isTurkish ? "Merhaba! Ben senin Türkçe öğretmeninim. Nasılsın?" : "Hi there! I'm your Turkish tutor. How are you?";
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = isTurkish ? "tr-TR" : "en-US";
+    utt.rate = speechRate; utt.voice = voice;
+    window.speechSynthesis.speak(utt);
+  };
+
+  // ═══ THEME ═══
+  const c = {
+    bg: "#FAF6EF", card: "#FFFFFF", primary: "#C4532B", primarySoft: "#F8EDE8",
+    accent: "#1B6B5A", accentSoft: "#E8F4F0", text: "#2D2017", muted: "#8C7B6B",
+    border: "#E8DFD3", userBubble: "#C4532B", gold: "#D4A843",
+  };
+  const trChars = ["ç", "ş", "ğ", "ı", "ö", "ü", "â"];
+
+  // ═══ SETUP SCREEN ═══
+  if (screen === "setup" || (!apiKey && screen === "home")) {
+    return (
+      <SetupScreen
+        onSave={(newProvider, newKey) => { setProvider(newProvider); setApiKey(newKey); setScreen("home"); }}
+        currentProvider={provider}
+        existing={apiKey}
+      />
+    );
+  }
+
+  // ═══ HOME SCREEN ═══
+  if (screen === "home") {
+    const voiceReady = HAS_SR && HAS_SS && trVoices.length > 0;
+    return (
+      <div style={{ minHeight: "100vh", background: c.bg }}>
+        <div style={{ padding: "28px 22px 14px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, color: c.primary }}>Kelime</div>
+            <div style={{ fontSize: 13, color: c.muted, marginTop: 4 }}>Talk your way to Turkish</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {stats.streak > 0 && (
+              <div style={{ background: "#FFF8ED", border: "1px solid #F0DFC0", borderRadius: 14, padding: "6px 11px", display: "flex", alignItems: "center", gap: 5 }}>
+                <span>🔥</span><span style={{ fontWeight: 700, color: c.gold, fontSize: 14 }}>{stats.streak}</span>
+              </div>
+            )}
+            <button onClick={() => setScreen("setup")} style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 14, padding: "7px 10px", fontSize: 13, color: c.muted }}>⚙</button>
+          </div>
+        </div>
+
+        {/* file:// warning — most common reason mic doesn't work */}
+        {typeof window !== "undefined" && window.location.protocol === "file:" && (
+          <div style={{
+            margin: "6px 22px 12px", padding: "14px 16px", borderRadius: 14,
+            background: "#FFF4D9", border: "1.5px solid #D4A843", color: "#7A5C0F",
+          }}>
+            <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6 }}>⚠️ Mic doesn't work this way</div>
+            <div style={{ fontSize: 12, lineHeight: 1.6 }}>
+              You opened the file directly. Browsers block the mic on <code style={{ background: "rgba(0,0,0,0.06)", padding: "1px 4px", borderRadius: 3 }}>file://</code> URLs (Safari and Chrome both).
+              <br/><br/>
+              <b>Use the launcher instead:</b>
+              <br/>• <b>Mac:</b> double-click <code>start-kelime-mac.command</code>
+              <br/>• <b>Windows:</b> double-click <code>start-kelime-windows.bat</code>
+              <br/><br/>
+              The launcher starts a tiny local server, opens the browser at <code>http://localhost:8765</code>, and the mic works perfectly. Closes when you close the window.
+            </div>
+          </div>
+        )}
+
+        {/* Diagnostic banner */}
+        <div style={{
+          margin: "6px 22px 18px", padding: "15px 18px", borderRadius: 16,
+          background: voiceReady && micStatus === "granted" ? "linear-gradient(135deg, #1B6B5A, #247A67)"
+            : voiceReady ? "linear-gradient(135deg, #C4532B, #D4633B)"
+            : "linear-gradient(135deg, #8C7B6B, #A6947F)",
+          color: "#fff",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <div style={{ fontSize: 20 }}>🎙️</div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>
+              {voiceReady && micStatus === "granted" ? "Voice chat ready"
+                : voiceReady ? "Test your microphone"
+                : "Limited voice support"}
+            </div>
+          </div>
+          <div style={{ fontSize: 12, opacity: 0.92, lineHeight: 1.5 }}>
+            {!HAS_SR ? "Speech recognition unavailable. Text mode only."
+              : !HAS_SS ? "Text-to-speech unavailable."
+              : trVoices.length === 0 ? "⚠ No Turkish voice installed. On Windows: Settings → Time & Language → Language → Add Turkish. On Android: already built-in."
+              : `${trVoices.length} Turkish voice${trVoices.length > 1 ? "s" : ""}, ${enVoices.length} English. Best picks auto-selected.`}
+          </div>
+          {micStatus !== "granted" && HAS_SR && (
+            <button onClick={checkMic} style={{
+              marginTop: 10, padding: "7px 13px", background: "rgba(255,255,255,0.15)",
+              border: "1px solid rgba(255,255,255,0.3)", color: "#fff", borderRadius: 9,
+              fontSize: 12, fontWeight: 600,
+            }}>Enable microphone</button>
+          )}
+          {micError && <div style={{ marginTop: 8, fontSize: 11, background: "rgba(0,0,0,0.2)", padding: "6px 9px", borderRadius: 7 }}>{micError}</div>}
+        </div>
+
+        {/* Scenarios */}
+        <div style={{ padding: "0 22px" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: c.muted, letterSpacing: 1, marginBottom: 10, textTransform: "uppercase" }}>Pick a conversation</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 9 }}>
+            {SCENARIOS.map(sc => (
+              <button key={sc.id} onClick={() => startScenario(sc)} style={{
+                background: c.card, border: `1px solid ${c.border}`, borderRadius: 14,
+                padding: "16px 12px", textAlign: "center", transition: "all 0.15s",
+                boxShadow: "0 1px 3px rgba(45,32,23,0.04)",
+                display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
+              }}>
+                <div style={{ fontSize: 24 }}>{sc.icon}</div>
+                <div style={{ fontWeight: 600, fontSize: 13, color: c.text }}>{sc.title}</div>
+                <div style={{ fontSize: 11, color: c.muted }}>{sc.sub}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {stats.sessions > 0 && <div style={{ padding: "22px", textAlign: "center", fontSize: 12, color: c.muted }}>{stats.sessions} conversation{stats.sessions !== 1 ? "s" : ""} so far 🌱</div>}
+      </div>
+    );
+  }
+
+  // ═══ CHAT SCREEN ═══
+  return (
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column", background: c.bg }}>
+      {/* Header */}
+      <div style={{
+        padding: "10px 14px", display: "flex", alignItems: "center", gap: 10,
+        background: "rgba(250,246,239,0.97)", backdropFilter: "blur(10px)",
+        borderBottom: `1px solid ${c.border}`, flexShrink: 0, zIndex: 10,
+      }}>
+        <button onClick={() => { setScreen("home"); setMessages([]); setScenario(null); window.speechSynthesis?.cancel(); setSpeaking(false); cancelListening(); }}
+          style={{ fontSize: 20, padding: "4px 6px", color: c.muted }}>←</button>
+        <div style={{ width: 34, height: 34, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, background: scenario ? `${scenario.color}14` : c.accentSoft, flexShrink: 0 }}>
+          {scenario?.icon}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, display: "flex", alignItems: "center", gap: 6 }}>
+            <span>{scenario?.title}</span>
+            <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 6, background: provider === "anthropic" ? "#F8EDE8" : "#E8F4F0", color: provider === "anthropic" ? "#C4532B" : "#1B6B5A" }}>
+              {provider === "anthropic" ? ANTHROPIC_MODELS[anthropicModel]?.label || "Claude" : "Gemini"}
+            </span>
+          </div>
+          <div style={{ fontSize: 11, color: speaking ? c.accent : c.muted, display: "flex", alignItems: "center", gap: 4 }}>
+            {speaking ? (
+              <>
+                <span style={{ display: "inline-flex", gap: 2 }}>
+                  {[0,1,2,3].map(i => <span key={i} style={{ width: 2, background: c.accent, borderRadius: 1, height: 8, animation: `bar 0.8s ease-in-out ${i*0.15}s infinite alternate` }}/>)}
+                </span>
+                {speakingLang === "tr" ? "Turkish" : "English"}
+              </>
+            ) : "Tap orange words to hear 🔊"}
+          </div>
+        </div>
+        {speaking && (
+          <button onClick={stopSpeaking} style={{ background: c.primarySoft, border: `1px solid ${c.primary}`, color: c.primary, borderRadius: 14, padding: "4px 9px", fontSize: 11, fontWeight: 600 }}>■ Stop</button>
+        )}
+        <button onClick={() => setShowSettings(!showSettings)} style={{ fontSize: 16, padding: 4, color: c.muted }}>⚙</button>
+      </div>
+
+      {/* Settings panel */}
+      {showSettings && (
+        <div style={{ padding: "12px 16px", background: c.card, borderBottom: `1px solid ${c.border}`, display: "flex", flexDirection: "column", gap: 12, flexShrink: 0, fontSize: 13, maxHeight: "60vh", overflowY: "auto" }}>
+          {/* Immersion level */}
+          <div>
+            <div style={{ marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>🎚️ How much Turkish?</span>
+              <span style={{ fontSize: 11, color: c.muted }}>Tutor's Turkish usage</span>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5 }}>
+              {Object.entries(IMMERSION_MODES).map(([key, mode]) => {
+                const active = immersion === key;
+                return (
+                  <button key={key} onClick={() => setImmersion(key)} style={{
+                    padding: "8px 6px", borderRadius: 9, textAlign: "center",
+                    background: active ? c.primarySoft : c.bg,
+                    border: `1.5px solid ${active ? c.primary : c.border}`,
+                    transition: "all 0.15s",
+                  }}>
+                    <div style={{ fontSize: 15, marginBottom: 2 }}>{mode.label.split(" ")[0]}</div>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: active ? c.primary : c.text }}>{mode.label.split(" ").slice(1).join(" ")}</div>
+                    <div style={{ fontSize: 10, color: c.muted, marginTop: 1 }}>{mode.sub}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span>🔊 Auto-speak responses</span>
+            <Toggle on={autoSpeak} onChange={setAutoSpeak} color={c.accent} border={c.border}/>
+          </div>
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+              <span>🐢 Speech speed</span>
+              <span style={{ color: c.muted, fontSize: 12 }}>{Math.round(speechRate * 100)}%</span>
+            </div>
+            <input type="range" min="0.5" max="1.1" step="0.05" value={speechRate} onChange={e => setSpeechRate(parseFloat(e.target.value))} style={{ width: "100%", accentColor: c.primary }}/>
+          </div>
+          {trVoices.length > 0 && (
+            <div>
+              <div style={{ marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
+                <span>🇹🇷 Turkish voice</span>
+                <button onClick={() => testVoice(trVoice, true)} style={{ fontSize: 11, color: c.accent, fontWeight: 600 }}>▶ Test</button>
+              </div>
+              <select value={selectedTrVoice || ""} onChange={e => setSelectedTrVoice(e.target.value)} style={{ width: "100%", padding: "7px 10px", borderRadius: 9, border: `1px solid ${c.border}`, background: c.bg, fontSize: 13 }}>
+                {trVoices.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
+              </select>
+            </div>
+          )}
+          {enVoices.length > 0 && (
+            <div>
+              <div style={{ marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
+                <span>🇬🇧 English voice</span>
+                <button onClick={() => testVoice(enVoice, false)} style={{ fontSize: 11, color: c.accent, fontWeight: 600 }}>▶ Test</button>
+              </div>
+              <select value={selectedEnVoice || ""} onChange={e => setSelectedEnVoice(e.target.value)} style={{ width: "100%", padding: "7px 10px", borderRadius: 9, border: `1px solid ${c.border}`, background: c.bg, fontSize: 13 }}>
+                {enVoices.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
+              </select>
+              <div style={{ fontSize: 11, color: c.muted, marginTop: 4, lineHeight: 1.4 }}>
+                💡 Tip: voices with "Natural", "Neural" or "Online" in the name sound best.
+              </div>
+            </div>
+          )}
+          {daVoices.length > 0 ? (
+            <div>
+              <div style={{ marginBottom: 4, display: "flex", justifyContent: "space-between" }}>
+                <span>🇩🇰 Danish voice <span style={{ fontSize: 10, color: c.muted, fontWeight: 400 }}>(for ‹word› bridges)</span></span>
+                <button onClick={() => {
+                  if (!HAS_SS) return;
+                  window.speechSynthesis.cancel();
+                  const utt = new SpeechSynthesisUtterance("Hej! Lys, rose, øl. Det her er din danske stemme.");
+                  utt.lang = "da-DK"; utt.rate = speechRate;
+                  if (daVoice) utt.voice = daVoice;
+                  window.speechSynthesis.speak(utt);
+                }} style={{ fontSize: 11, color: c.accent, fontWeight: 600 }}>▶ Test</button>
+              </div>
+              <select value={selectedDaVoice || ""} onChange={e => setSelectedDaVoice(e.target.value)} style={{ width: "100%", padding: "7px 10px", borderRadius: 9, border: `1px solid ${c.border}`, background: c.bg, fontSize: 13 }}>
+                {daVoices.map(v => <option key={v.name} value={v.name}>{v.name}</option>)}
+              </select>
+            </div>
+          ) : (
+            <div style={{ fontSize: 11, color: c.muted, lineHeight: 1.4, padding: "6px 10px", background: c.bg, borderRadius: 8, border: `1px dashed ${c.border}` }}>
+              🇩🇰 No Danish voice installed. The app will fall back to the English voice for ‹Danish› reference words. To add one on macOS: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices → Danish.
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 9px", background: c.bg, borderRadius: 8, border: `1px solid ${c.border}` }}>
+            <div style={{ fontSize: 12 }}>
+              <span style={{ color: c.muted }}>Provider: </span>
+              <span style={{ fontWeight: 600 }}>{provider === "gemini" ? "🟢 Gemini (free)" : "🟠 Anthropic (paid)"}</span>
+            </div>
+            <button onClick={() => { setScreen("setup"); }} style={{ fontSize: 11, color: c.primary, fontWeight: 600 }}>Change →</button>
+          </div>
+
+          {/* Anthropic model picker - only when using Anthropic */}
+          {provider === "anthropic" && (
+            <div>
+              <div style={{ marginBottom: 6, fontSize: 12, color: c.muted, display: "flex", justifyContent: "space-between" }}>
+                <span>🧠 Claude model — switch to test</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                {Object.entries(ANTHROPIC_MODELS).map(([id, m]) => {
+                  const active = anthropicModel === id;
+                  return (
+                    <button key={id} onClick={() => setAnthropicModel(id)} style={{
+                      padding: "8px 11px", borderRadius: 9, textAlign: "left",
+                      background: active ? "#FFFFFF" : c.bg,
+                      border: `1.5px solid ${active ? m.color : c.border}`,
+                      transition: "all 0.15s",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, marginBottom: 2 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ fontWeight: 700, fontSize: 13, color: active ? m.color : c.text }}>{m.label}</span>
+                          <span style={{ fontSize: 10, color: c.muted, fontWeight: 600 }}>{m.badge}</span>
+                        </div>
+                        <span style={{ fontSize: 10, color: c.muted, fontWeight: 600 }}>{m.estCost}</span>
+                      </div>
+                      <div style={{ fontSize: 11, color: active ? c.text : c.muted, lineHeight: 1.4 }}>{m.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              <div style={{ fontSize: 10, color: c.muted, marginTop: 6, lineHeight: 1.4, fontStyle: "italic" }}>
+                💡 Send a few messages on each model to compare. The current chat history stays — only the model swaps.
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "12px 12px 6px", display: "flex", flexDirection: "column", gap: 9 }}>
+        {messages.map((msg, i) => (
+          <div key={i} className="fade-in" style={{
+            display: "flex", flexDirection: "column",
+            alignItems: msg.role === "user" ? "flex-end" : "flex-start",
+            maxWidth: "90%", alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+          }}>
+            <div style={{
+              padding: "10px 14px",
+              borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+              background: msg.role === "user" ? c.userBubble : c.card,
+              color: msg.role === "user" ? "#fff" : c.text,
+              fontSize: 14.5, lineHeight: 1.6,
+              boxShadow: msg.role === "user" ? "none" : "0 1px 3px rgba(45,32,23,0.06)",
+              border: msg.role === "user" ? "none" : `1px solid ${c.border}`,
+              whiteSpace: "pre-wrap", wordBreak: "break-word",
+            }}>
+              {msg.role === "assistant"
+                ? <MessageContent text={msg.text} trVoice={trVoice} daVoice={daVoice} rate={speechRate}/>
+                : msg.text}
+            </div>
+            {msg.role === "assistant" && HAS_SS && (
+              <button onClick={() => replayMessage(msg.text)} style={{ fontSize: 11, color: c.muted, padding: "3px 8px", marginTop: 2, display: "flex", alignItems: "center", gap: 3 }}>🔊 Replay full message</button>
+            )}
+          </div>
+        ))}
+        {loading && (
+          <div style={{ alignSelf: "flex-start" }}>
+            <div style={{ padding: "11px 15px", borderRadius: "16px 16px 16px 4px", background: c.card, border: `1px solid ${c.border}` }}>
+              <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                {[0,1,2].map(j => <div key={j} style={{ width: 6, height: 6, borderRadius: "50%", background: c.accent, animation: `bounce 1.4s ease-in-out ${j*0.16}s infinite` }}/>)}
+                <span style={{ fontSize: 12, color: c.muted, marginLeft: 4 }}>Thinking...</span>
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={chatEndRef}/>
+      </div>
+
+      {/* Live transcript */}
+      {listening && (
+        <div style={{ margin: "0 12px 5px", padding: "9px 13px", background: c.primarySoft, borderRadius: 12, border: `1.5px solid ${c.primary}40`, fontSize: 13, color: c.primary, display: "flex", alignItems: "center", gap: 7, minHeight: 36 }}>
+          <span>🎙️</span>
+          <span style={{ fontStyle: transcript ? "normal" : "italic", flex: 1 }}>
+            {listening === "preparing" ? "Asking your browser for mic access..." : (transcript || "Listening... start speaking")}
+          </span>
+        </div>
+      )}
+
+      {/* Mic error — visible right above the input bar so the blink isn't silent */}
+      {micError && !listening && (
+        <div style={{ margin: "0 12px 5px", padding: "8px 11px", background: "#FDE8E0", border: `1px solid #E89B7D`, borderRadius: 9, fontSize: 11.5, color: "#B8441F", lineHeight: 1.45, display: "flex", alignItems: "flex-start", gap: 7 }}>
+          <span style={{ fontSize: 13 }}>🎙️</span>
+          <span style={{ flex: 1 }}>{micError}</span>
+          <button onClick={() => setMicError("")} style={{ fontSize: 13, color: "#B8441F", padding: "0 4px", lineHeight: 1 }}>×</button>
+        </div>
+      )}
+
+      {/* TR keys */}
+      {showTRKeys && !listening && (
+        <div style={{ padding: "5px 8px 3px", display: "flex", gap: 3, flexWrap: "wrap", borderTop: `1px solid ${c.border}`, background: c.card, justifyContent: "center", flexShrink: 0 }}>
+          {trChars.map(ch => (
+            <button key={ch} onClick={() => insertChar(ch)} style={{ padding: "6px 0", width: 36, background: c.bg, border: `1px solid ${c.border}`, borderRadius: 7, fontSize: 15, fontWeight: 500 }}>{ch}</button>
+          ))}
+        </div>
+      )}
+
+      {/* Input bar */}
+      <div style={{ padding: "6px 8px 8px", display: "flex", gap: 5, alignItems: "flex-end", borderTop: showTRKeys ? "none" : `1px solid ${c.border}`, background: "rgba(250,246,239,0.97)", backdropFilter: "blur(10px)", flexShrink: 0 }}>
+        {!listening ? (
+          <>
+            <button onClick={() => setShowTRKeys(!showTRKeys)} style={{ width: 36, height: 36, borderRadius: 9, border: `1.5px solid ${showTRKeys ? c.primary : c.border}`, background: showTRKeys ? c.primarySoft : c.card, fontSize: 13, fontWeight: 700, color: showTRKeys ? c.primary : c.muted, flexShrink: 0 }}>ğ</button>
+            <textarea
+              ref={inputRef} value={input}
+              onChange={e => { setInput(e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px"; }}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(input); } }}
+              placeholder="Type or tap mic 🎙️"
+              rows={1}
+              style={{ flex: 1, padding: "8px 13px", fontSize: 14, borderRadius: 18, border: `1.5px solid ${c.border}`, background: c.card, color: c.text, outline: "none", resize: "none", lineHeight: 1.4, minHeight: 36, maxHeight: 100 }}
+              onFocus={e => e.target.style.borderColor = c.primary}
+              onBlur={e => e.target.style.borderColor = c.border}
+            />
+            {input.trim() ? (
+              <button onClick={() => sendMessage(input)} disabled={loading} style={{ width: 36, height: 36, borderRadius: "50%", background: loading ? c.border : c.primary, color: "#fff", fontSize: 15, flexShrink: 0 }}>↑</button>
+            ) : (
+              <button onClick={startListening} disabled={loading || !HAS_SR} style={{ width: 36, height: 36, borderRadius: "50%", background: loading || !HAS_SR ? c.border : c.primary, color: "#fff", fontSize: 14, flexShrink: 0, boxShadow: !loading && HAS_SR ? `0 2px 7px ${c.primary}40` : "none" }} title={!HAS_SR ? "Mic not available" : "Tap to speak"}>🎙️</button>
+            )}
+          </>
+        ) : (
+          <div style={{ display: "flex", gap: 7, width: "100%", alignItems: "center" }}>
+            <button onClick={cancelListening} style={{ width: 36, height: 36, borderRadius: "50%", border: `1.5px solid ${c.border}`, background: c.card, fontSize: 13, flexShrink: 0, color: c.muted }}>✕</button>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 9, background: `linear-gradient(135deg, ${c.primary}, #D4633B)`, borderRadius: 18, padding: "7px 14px", color: "#fff", fontSize: 12, fontWeight: 600, position: "relative" }}>
+              <span style={{ position: "absolute", top: -3, left: -3, right: -3, bottom: -3, borderRadius: 22, border: `2px solid ${c.primary}`, animation: "pulse-ring 1.5s ease-out infinite", pointerEvents: "none" }}/>
+              <span style={{ display: "inline-flex", gap: 2 }}>
+                {[0,1,2,3,4].map(i => <span key={i} style={{ width: 2.5, background: "#fff", borderRadius: 1, height: 10, animation: `bar 0.6s ease-in-out ${i*0.1}s infinite alternate` }}/>)}
+              </span>
+              {listening === "preparing" ? "Preparing..." : (listenLang === "tr-TR" ? "Recording Turkish" : "Recording English")}
+            </div>
+            <button onClick={sendTranscript} disabled={!transcript.trim()} style={{ width: 36, height: 36, borderRadius: "50%", background: transcript.trim() ? c.accent : c.border, color: "#fff", fontSize: 15, flexShrink: 0 }}>↑</button>
+          </div>
+        )}
+      </div>
+
+      {/* Mic language toggle */}
+      {!listening && HAS_SR && (
+        <div style={{ padding: "0 10px 6px", display: "flex", justifyContent: "center", gap: 5, flexShrink: 0 }}>
+          <div style={{ fontSize: 10, color: c.muted, marginRight: 2, alignSelf: "center" }}>Mic speaks:</div>
+          {[{ v: "en-US", l: "English" }, { v: "tr-TR", l: "Turkish" }].map(opt => (
+            <button key={opt.v} onClick={() => setListenLang(opt.v)} style={{ padding: "2px 9px", borderRadius: 11, border: `1px solid ${listenLang === opt.v ? c.primary : c.border}`, background: listenLang === opt.v ? c.primarySoft : "transparent", color: listenLang === opt.v ? c.primary : c.muted, fontSize: 10, fontWeight: 600 }}>{opt.l}</button>
+          ))}
+        </div>
+      )}
+
+      {apiError && <div style={{ margin: "0 12px 6px", padding: "6px 10px", background: "#FDE8E0", border: `1px solid #E89B7D`, borderRadius: 8, fontSize: 11, color: "#B8441F" }}>⚠ {apiError}</div>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SUB-COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+function Toggle({ on, onChange, color, border }) {
+  return (
+    <button onClick={() => onChange(!on)} style={{
+      width: 42, height: 24, borderRadius: 12, background: on ? color : border,
+      position: "relative", transition: "background 0.2s",
+    }}>
+      <div style={{
+        width: 18, height: 18, borderRadius: "50%", background: "#fff",
+        position: "absolute", top: 3, left: on ? 21 : 3, transition: "left 0.2s",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+      }}/>
+    </button>
+  );
+}
+
+function SetupScreen({ onSave, currentProvider, existing }) {
+  const [provider, setProvider] = useState(currentProvider || "gemini");
+  const [key, setKey] = useState(() => store.get(`kelime-apikey-${provider}`, ""));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [showKey, setShowKey] = useState(false);
+
+  // When provider changes, load that provider's saved key
+  useEffect(() => {
+    setKey(store.get(`kelime-apikey-${provider}`, ""));
+    setError("");
+  }, [provider]);
+
+  const cfg = {
+    gemini: {
+      name: "Google Gemini",
+      tagline: "Free • No credit card • Generous limits",
+      placeholder: "AIzaSy...",
+      prefix: "AIza",
+      getUrl: "https://aistudio.google.com/apikey",
+      getText: "aistudio.google.com/apikey",
+      steps: [
+        "Open Google AI Studio (link above) — sign in with any Google account",
+        'Click the big blue "Create API key" button',
+        "Copy the key (starts with AIzaSy…) and paste it below",
+      ],
+      color: "#1B6B5A",
+      recommended: true,
+    },
+    anthropic: {
+      name: "Anthropic Claude",
+      tagline: "Paid — requires credits on your Anthropic account",
+      placeholder: "sk-ant-api03-...",
+      prefix: "sk-ant-",
+      getUrl: "https://console.anthropic.com/settings/keys",
+      getText: "console.anthropic.com/settings/keys",
+      steps: [
+        "Sign in to the Anthropic Console",
+        'Go to API Keys → "Create Key"',
+        "Paste the key below (starts with sk-ant-…)",
+      ],
+      color: "#C4532B",
+      recommended: false,
+    },
+  };
+  const c = cfg[provider];
+
+  const handleSave = async () => {
+    if (!key.trim()) { setError("Please enter an API key"); return; }
+    if (!key.trim().startsWith(c.prefix)) { setError(`Key should start with "${c.prefix}"`); return; }
+    setSaving(true); setError("");
+    try {
+      // Validate by sending a tiny request
+      if (provider === "gemini") {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(key.trim())}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: "hi" }] }],
+              generationConfig: { maxOutputTokens: 5 },
+            }),
+          }
+        );
+        if (!res.ok) {
+          const errData = await res.text();
+          setError(`Key validation failed (${res.status}). ${errData.slice(0, 150)}`);
+          setSaving(false); return;
+        }
+      } else {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": key.trim(),
+            "anthropic-version": "2023-06-01",
+            "anthropic-dangerous-direct-browser-access": "true",
+          },
+          body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 10, messages: [{ role: "user", content: "hi" }] }),
+        });
+        if (!res.ok) {
+          const errData = await res.text();
+          setError(`Key validation failed (${res.status}). ${errData.slice(0, 150)}`);
+          setSaving(false); return;
+        }
+      }
+      onSave(provider, key.trim());
+    } catch (e) { setError(`Connection error: ${e.message}`); setSaving(false); }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", padding: "28px 22px", background: "#FAF6EF", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, color: "#C4532B", marginBottom: 4 }}>Kelime</div>
+      <div style={{ fontSize: 13, color: "#8C7B6B", marginBottom: 22 }}>Pick your AI provider</div>
+
+      {/* Provider choice */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
+        {["gemini", "anthropic"].map(p => {
+          const info = cfg[p];
+          const active = provider === p;
+          return (
+            <button key={p} onClick={() => setProvider(p)} style={{
+              padding: "14px 16px", borderRadius: 14, textAlign: "left",
+              background: active ? "#FFFFFF" : "#F5EFE4",
+              border: `2px solid ${active ? info.color : "transparent"}`,
+              boxShadow: active ? `0 2px 10px ${info.color}22` : "none",
+              transition: "all 0.15s",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: active ? info.color : "#2D2017" }}>{info.name}</div>
+                {info.recommended && (
+                  <div style={{ fontSize: 10, fontWeight: 700, background: "#D4EDE7", color: "#1B6B5A", padding: "2px 7px", borderRadius: 8, letterSpacing: 0.5 }}>RECOMMENDED</div>
+                )}
+              </div>
+              <div style={{ fontSize: 12, color: active ? "#2D2017" : "#8C7B6B", marginTop: 3 }}>{info.tagline}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Active provider setup */}
+      <div style={{ background: "#FFFFFF", border: "1px solid #E8DFD3", borderRadius: 16, padding: 18, marginBottom: 14 }}>
+        <div style={{ fontSize: 13, color: "#8C7B6B", lineHeight: 1.55, marginBottom: 14 }}>
+          Get a key from{" "}
+          <a href={c.getUrl} target="_blank" rel="noreferrer" style={{ color: c.color, fontWeight: 600 }}>{c.getText}</a>
+          <ol style={{ marginTop: 10, paddingLeft: 20, fontSize: 12.5, color: "#2D2017" }}>
+            {c.steps.map((step, i) => <li key={i} style={{ marginBottom: 4 }}>{step}</li>)}
+          </ol>
+        </div>
+        <div style={{ position: "relative" }}>
+          <input
+            type={showKey ? "text" : "password"}
+            value={key} onChange={e => setKey(e.target.value)}
+            placeholder={c.placeholder}
+            style={{
+              width: "100%", padding: "10px 72px 10px 12px", fontSize: 12,
+              borderRadius: 9, border: "1.5px solid #E8DFD3", background: "#FAF6EF",
+              color: "#2D2017", outline: "none", fontFamily: "monospace",
+            }}
+          />
+          <button onClick={() => setShowKey(!showKey)} style={{
+            position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
+            fontSize: 11, color: "#8C7B6B", background: "#FFF", padding: "4px 7px",
+            border: "1px solid #E8DFD3", borderRadius: 6,
+          }}>{showKey ? "Hide" : "Show"}</button>
+        </div>
+        {error && <div style={{ marginTop: 9, padding: "7px 10px", background: "#FDE8E0", border: "1px solid #E89B7D", borderRadius: 7, fontSize: 11, color: "#B8441F" }}>{error}</div>}
+        <button onClick={handleSave} disabled={saving || !key.trim()} style={{
+          marginTop: 12, width: "100%", padding: 11, background: saving || !key.trim() ? "#E8DFD3" : c.color,
+          color: "#fff", borderRadius: 10, fontSize: 13, fontWeight: 600,
+        }}>
+          {saving ? "Validating..." : "Continue →"}
+        </button>
+      </div>
+
+      <div style={{ background: "#E8F4F0", border: "1px solid rgba(27,107,90,0.2)", borderRadius: 12, padding: 13, fontSize: 11, color: "#1B6B5A", lineHeight: 1.55 }}>
+        <div style={{ fontWeight: 600, marginBottom: 4 }}>📱 Install as app (Android)</div>
+        <div>Open in Chrome → menu (⋮) → "Add to Home Screen" → launch like any app!</div>
+      </div>
+
+      {existing && (
+        <button onClick={() => onSave(currentProvider || "gemini", existing)} style={{ marginTop: 14, padding: "8px", fontSize: 12, color: "#8C7B6B" }}>← Back to app</button>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
