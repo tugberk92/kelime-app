@@ -24,7 +24,7 @@ echo "  → To stop: press Ctrl+C or close this window"
 echo ""
 
 # Open in default browser after a short delay
-( sleep 1 && open "http://localhost:$PORT/kelime.html" ) &
+( sleep 1 && open "http://localhost:$PORT/" ) &
 
 # Try Python 3 first, fallback to Python 2
 if command -v python3 >/dev/null 2>&1; then
