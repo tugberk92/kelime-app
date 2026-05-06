@@ -130,7 +130,8 @@ Examples of WRONG (do NOT do this):
   ✗ Try saying Merhaba — Turkish without « » wrappers is wrong
 
 ═══ CRITICAL: SPEAK TURKISH, NOT JUST ABOUT TURKISH ═══
-Your replies MUST mix two voices like a real bilingual friend:
+Your replies are heard out loud through two (sometimes three) different voices,
+so STRUCTURE the message like a real conversation, not a paragraph.
 
 ROLE 1 — TEACHER (English):
 - Explain grammar, culture, meaning
@@ -146,13 +147,45 @@ ROLE 2 — NATIVE SPEAKER (Turkish, in « »):
 EVERY message MUST end with a question asked IN TURKISH (wrapped in « »).
 Optionally follow with an English hint in parentheses so she's not lost.
 
-GOOD EXAMPLE:
-"«Merhaba» (mer-HA-ba) = "Hello" — used any time of day, stress on HA.
-Fun fact: Turks shake hands with strangers but kiss cheeks with friends — twice!
+═══ MESSAGE LAYOUT — ALTERNATE INSTRUCTION & DIALOG ═══
+Write as a back-and-forth between teacher voice and Turkish dialog, with each
+turn on its OWN LINE separated by a BLANK LINE. This gives the TTS engine
+clean breath points and makes the rhythm flow.
 
-Now I'll ask in Turkish, listen carefully:
+Use this skeleton (3-5 short blocks, never a wall of text):
+
+  [English line — set up the next Turkish bit, max ~12 words]
+
+  «Turkish phrase» (pron) = "translation"
+
+  [English line — one tip, sound bridge, or quick correction, max ~12 words]
+
+  «Turkish question?» (pron) = "Q meaning"
+
+GOOD (heard cleanly — instruction → dialog → instruction → dialog):
+  Greetings in Turkey work all day long.
+
+  «Merhaba» (mer-HA-ba) = "Hello"
+
+  Stress sits on HA. Your turn — try answering me.
+
+  «Sen nasılsın?» (sen na-SIL-sın) = "How are you?"
+
+BAD (long mashed paragraph — voice switching gets choppy):
+  "Merhaba means hello and you stress the HA syllable, anyway let's see if you can answer this question: «Sen nasılsın?» which means how are you, try it!"
+
+GOOD EXAMPLE (note the blank lines between blocks):
+"Greetings work all day long.
+
+«Merhaba» (mer-HA-ba) = "Hello"
+
+Stress sits on HA. Now my turn to ask.
+
 «Sen nasılsın?» (sen na-SIL-sın) = "How are you?"
-Try answering with: «İyiyim» (ee-YEE-yim) = "I am good""
+
+You can answer with this:
+
+«İyiyim» (ee-YEE-yim) = "I am good""
 
 Notice how EVERY Turkish word has pronunciation in parentheses. Never skip this.
 
@@ -167,8 +200,10 @@ BAD EXAMPLE (too English-heavy — DO NOT DO THIS):
 - Keep English explanations SHORT (one or two sentences). Let the « » Turkish and ‹ › Danish do the heavy lifting — long English narration kills the rhythm of voice mode.
 
 ═══ VOICE MODE RULES ═══
-- Keep messages SHORT (3-5 sentences) since she's LISTENING
+- Keep messages SHORT (3-5 short lines) since she's LISTENING
 - Natural flowing text — no bullets, no markdown, no headers
+- One idea per line; blank line between English instruction and Turkish dialog
+- NO EMOJIS — they get read aloud by the TTS as "fire emoji", "Turkey flag" etc. Use words instead.
 - Every message ends with a Turkish question she can answer by speaking
 
 ═══ CORRECTION STYLE ═══
@@ -215,15 +250,25 @@ const SCENARIOS = [
   { id: "culture", icon: "🇹🇷", title: "Culture & Phrases", sub: "Insider knowledge", color: "#8B4513", prompt: "Teach me one real Turkish phrase or cultural thing textbooks skip. Make it insider. Short for voice. Use « » around all Turkish." },
 ];
 
-const STARTER = `«Merhaba!» (mer-HA-ba) = "Hello!" I'm Kelime, your Turkish conversation buddy.
+const STARTER = `I'm Kelime, your Turkish conversation buddy.
 
-As a Danish speaker, you have a huge advantage — your ‹ø› is Turkish 'ö', and your ‹y› is Turkish 'ü'. You already know sounds most English speakers struggle with!
+«Merhaba!» (mer-HA-ba) = "Hello!"
 
-Your first word: «Merhaba» (mer-HA-ba) = "Hello" — used any time of day.
+You have a huge head start as a Dane.
 
-Now let me ask you in Turkish, listen carefully:
+Turkish 'ü' sounds like ‹y› in ‹lys›. Turkish 'ö' is your ‹ø›.
+
+Your first word — used any time of day.
+
+«Merhaba» (mer-HA-ba) = "Hello"
+
+Now my turn to ask. Listen.
+
 «Sen nasılsın?» (sen na-SIL-sın) = "How are you?"
-Try answering with: «İyiyim» (ee-YEE-yim) = "I am good"`;
+
+You can answer with this.
+
+«İyiyim» (ee-YEE-yim) = "I am good"`;
 
 // ═══════════════════════════════════════════════════════════════
 // CAPABILITIES & VOICES
@@ -261,8 +306,64 @@ const store = {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// BROWSER DETECTION (for tailored mic-permission instructions)
+// ═══════════════════════════════════════════════════════════════
+const UA = navigator.userAgent;
+const IS_MAC = /Macintosh|Mac OS X/.test(UA);
+const IS_EDGE = /Edg\//.test(UA);
+const IS_BRAVE = !!navigator.brave;
+const IS_CHROME = /Chrome\//.test(UA) && !IS_EDGE && !IS_BRAVE && !/OPR\//.test(UA);
+const IS_SAFARI = /^((?!chrome|android).)*safari/i.test(UA) && !IS_CHROME && !IS_EDGE;
+const BROWSER_NAME = IS_EDGE ? "Edge" : IS_BRAVE ? "Brave" : IS_CHROME ? "Chrome" : IS_SAFARI ? "Safari" : "your browser";
+
+// Step-by-step recovery instructions when SpeechRecognition fires not-allowed /
+// service-not-allowed. The two layers of permission (macOS system + browser site)
+// are often confused with each other — spell both out so Tina knows which one to fix.
+function micFixSteps(reason) {
+  const lines = [];
+  if (reason === "service") {
+    lines.push("⚠️ Speech recognition was blocked by " + BROWSER_NAME + " itself.");
+  } else {
+    lines.push("⚠️ Mic permission denied. Two things to check:");
+  }
+  if (IS_MAC) {
+    lines.push("1) macOS:  → System Settings → Privacy & Security → Microphone → turn ON " + BROWSER_NAME + ".");
+  }
+  if (IS_SAFARI) {
+    lines.push((IS_MAC ? "2)" : "1)") + " Safari:  Safari menu → Settings for This Website… → Microphone → Allow. Then refresh the page.");
+    lines.push("Note: Safari's speech recognition can be flaky. If it keeps failing, try Chrome — it has the most reliable Web Speech API support.");
+  } else {
+    lines.push((IS_MAC ? "2)" : "1)") + " " + BROWSER_NAME + ":  click the 🔒 lock icon in the address bar → Microphone → Allow → refresh the page.");
+  }
+  if (IS_BRAVE) {
+    lines.push("3) Brave Shield:  click the Brave lion 🦁 in the address bar → drop Shields for this site (Web Speech uses a Google service Brave may block).");
+  }
+  lines.push("After enabling, tap the mic again — if it still fails, try a hard refresh (Cmd+Shift+R).");
+  return lines.join("\n");
+}
+
+// ═══════════════════════════════════════════════════════════════
 // TTS HELPERS
 // ═══════════════════════════════════════════════════════════════
+// Strip emoji glyphs before speaking — many engines (esp. macOS Safari,
+// some Chromium builds) read out the Unicode name out loud, e.g. 🇹🇷 →
+// "Turkey flag", 🔥 → "fire", which derails the lesson.
+function stripEmoji(s) {
+  if (!s) return s;
+  let r = s;
+  // Regional indicator pairs (flags)
+  r = r.replace(/[\u{1F1E6}-\u{1F1FF}]/gu, "");
+  // Extended Pictographic covers most other emoji
+  try { r = r.replace(/\p{Extended_Pictographic}/gu, ""); }
+  catch { /* older browsers without \p — fall through */ }
+  // Variation selectors and zero-width joiner used by emoji sequences
+  r = r.replace(/[\u{FE0F}‍]/gu, "");
+  // Fallback for some symbols not covered above
+  r = r.replace(/[\u{2600}-\u{27BF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}]/gu, "");
+  // Collapse whitespace left behind
+  return r.replace(/\s+/g, " ").trim();
+}
+
 // Splits text into TR (« »), DA (‹ ›), and EN segments. Adjacent same-language
 // fragments get merged so the TTS engine speaks them as one utterance — this
 // removes the audible "stutter" gap between back-to-back English phrases.
@@ -323,43 +424,70 @@ function cleanEn(text) {
   return r.trim();
 }
 
+// Break a long string into sentence-sized utterances. Speaking one big block
+// makes the engine sound monotone; sentence chunks give it natural prosody.
+function chunkSentences(s) {
+  const out = [];
+  const re = /[^.!?…]+[.!?…]+|[^.!?…]+$/g;
+  let m;
+  while ((m = re.exec(s)) !== null) {
+    const piece = m[0].trim();
+    if (piece) out.push(piece);
+  }
+  return out.length ? out : [s];
+}
+
 function speakSegments(segments, rate, trVoice, enVoice, daVoice, onSegment, onDone) {
   if (!HAS_SS || segments.length === 0) { onDone?.(); return; }
   window.speechSynthesis.cancel();
+
+  // Expand every segment into [{lang, text}] sentence chunks for natural prosody.
+  const queue = [];
+  let prevLang = null;
+  for (const seg of segments) {
+    const raw = seg.lang === "en" ? cleanEn(seg.text) : seg.text;
+    const cleaned = stripEmoji(raw);
+    if (!cleaned || cleaned.length < 2 || !/[a-zA-ZçşğıöüâÇŞĞIÖÜÂæøåÆØÅ]/.test(cleaned)) continue;
+    for (const chunk of chunkSentences(cleaned)) {
+      queue.push({ lang: seg.lang, text: chunk, switching: prevLang !== null && prevLang !== seg.lang });
+      prevLang = seg.lang;
+    }
+  }
+  if (!queue.length) { onDone?.(); return; }
+
   let i = 0;
-  const next = () => {
-    if (i >= segments.length) { onDone?.(); return; }
-    const seg = segments[i++];
-    let text;
-    if (seg.lang === "tr") text = seg.text.trim();
-    else if (seg.lang === "da") text = seg.text.trim();
-    else text = cleanEn(seg.text);
-    // Skip empty / punctuation-only / single-character segments — these cause audible glitches
-    if (!text || text.length < 2 || !/[a-zA-ZçşğıöüâÇŞĞIÖÜÂæøåÆØÅ]/.test(text)) return next();
-    const utt = new SpeechSynthesisUtterance(text);
-    if (seg.lang === "tr") {
-      utt.lang = "tr-TR";
-      utt.rate = rate;
-      if (trVoice) utt.voice = trVoice;
-    } else if (seg.lang === "da") {
-      utt.lang = "da-DK";
-      utt.rate = rate; // Danish reference words deserve the same careful pace as Turkish
-      if (daVoice) utt.voice = daVoice;
-      else if (enVoice) utt.voice = enVoice; // fallback — better than no voice
+  const speakNext = () => {
+    if (i >= queue.length) { onDone?.(); return; }
+    const seg = queue[i++];
+    const utt = new SpeechSynthesisUtterance(seg.text);
+    // Pick voice + lang. If the requested voice isn't installed, fall back to
+    // the English voice AND English lang — telling the engine "speak Danish"
+    // when no Danish voice exists makes it choke or use a robotic fallback.
+    if (seg.lang === "tr" && trVoice) {
+      utt.lang = "tr-TR"; utt.voice = trVoice; utt.rate = rate;
+    } else if (seg.lang === "da" && daVoice) {
+      utt.lang = "da-DK"; utt.voice = daVoice; utt.rate = rate;
+    } else if (seg.lang === "tr" || seg.lang === "da") {
+      // No native voice for this lang — speak with English voice but keep the
+      // word as-is. Sounds OK for short bridge words; better than the engine glitching.
+      utt.lang = "en-US"; if (enVoice) utt.voice = enVoice; utt.rate = rate;
     } else {
-      utt.lang = "en-US";
-      // English carries the explanation — speak it noticeably faster so the
-      // Turkish/Danish demo words breathe and the rhythm stays musical.
+      utt.lang = "en-US"; if (enVoice) utt.voice = enVoice;
       utt.rate = Math.min(rate + 0.30, 1.15);
-      if (enVoice) utt.voice = enVoice;
     }
     utt.pitch = 1.0;
     utt.onstart = () => onSegment?.(seg.lang);
-    utt.onend = next;
-    utt.onerror = next;
+    utt.onend = () => {
+      // A small breath when switching languages gives the engine time to swap
+      // voice/model cleanly — eliminates the "stuttery" overlap users hear.
+      const nextSwitch = queue[i] && queue[i].switching;
+      if (nextSwitch) setTimeout(speakNext, 120);
+      else speakNext();
+    };
+    utt.onerror = speakNext;
     window.speechSynthesis.speak(utt);
   };
-  next();
+  speakNext();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -380,15 +508,18 @@ function MessageContent({ text, trVoice, daVoice, rate }) {
 
   const tap = (word, type, key) => {
     if (!HAS_SS) return;
+    const clean = stripEmoji(word);
+    if (!clean) return;
     window.speechSynthesis.cancel();
     setPlaying(key);
-    const utt = new SpeechSynthesisUtterance(word);
-    if (type === "da") {
-      utt.lang = "da-DK";
-      if (daVoice) utt.voice = daVoice;
+    const utt = new SpeechSynthesisUtterance(clean);
+    if (type === "da" && daVoice) {
+      utt.lang = "da-DK"; utt.voice = daVoice;
+    } else if (type === "tr" && trVoice) {
+      utt.lang = "tr-TR"; utt.voice = trVoice;
     } else {
-      utt.lang = "tr-TR";
-      if (trVoice) utt.voice = trVoice;
+      // No native voice — speak with English engine but keep the spelling.
+      utt.lang = "en-US";
     }
     utt.rate = rate;
     utt.onend = () => setPlaying(-1);
@@ -615,8 +746,8 @@ function App() {
       setMicStatus("granted"); setMicError(""); return true;
     } catch (e) {
       setMicStatus("denied");
-      if (e.name === "NotAllowedError") setMicError("Microphone blocked. On macOS: System Settings → Privacy & Security → Microphone → enable Chrome. Then click the lock icon in Chrome's address bar → allow microphone.");
-      else if (e.name === "NotFoundError") setMicError("No microphone found.");
+      if (e.name === "NotAllowedError" || e.name === "SecurityError") setMicError(micFixSteps("denied"));
+      else if (e.name === "NotFoundError") setMicError("No microphone found. Plug one in or check your audio devices.");
       else setMicError(`Mic error: ${e.message || e.name}`);
       return false;
     }
@@ -649,7 +780,7 @@ function App() {
         setListening(false);
         setMicStatus("denied");
         if (e.name === "NotAllowedError" || e.name === "SecurityError") {
-          setMicError("Microphone blocked. macOS: System Settings → Privacy & Security → Microphone → enable your browser. Then click the lock 🔒 in the address bar → Microphone → Allow.");
+          setMicError(micFixSteps("denied"));
         } else if (e.name === "NotFoundError") {
           setMicError("No microphone found. Plug one in or check your audio devices.");
         } else {
@@ -682,11 +813,14 @@ function App() {
     rec.onend = () => setListening(false);
     rec.onerror = (ev) => {
       setListening(false);
-      if (ev.error === "not-allowed" || ev.error === "service-not-allowed") {
+      if (ev.error === "not-allowed") {
         setMicStatus("denied");
-        setMicError("Mic permission denied. macOS: System Settings → Privacy & Security → Microphone → enable your browser. Then click the lock 🔒 in the address bar → Microphone → Allow.");
+        setMicError(micFixSteps("denied"));
+      } else if (ev.error === "service-not-allowed") {
+        setMicStatus("denied");
+        setMicError(micFixSteps("service"));
       } else if (ev.error === "audio-capture") {
-        setMicError("Can't access microphone. Check macOS System Settings → Privacy & Security → Microphone.");
+        setMicError("Can't access microphone. Check macOS System Settings → Privacy & Security → Microphone, then refresh the page.");
       } else if (ev.error === "network") {
         setMicError("Network error — speech recognition uses Google's servers. Check your internet connection.");
       } else if (ev.error === "no-speech") {
@@ -784,9 +918,9 @@ function App() {
     if (!HAS_SS) return;
     window.speechSynthesis.cancel();
     const text = isTurkish ? "Merhaba! Ben senin Türkçe öğretmeninim. Nasılsın?" : "Hi there! I'm your Turkish tutor. How are you?";
-    const utt = new SpeechSynthesisUtterance(text);
+    const utt = new SpeechSynthesisUtterance(stripEmoji(text));
     utt.lang = isTurkish ? "tr-TR" : "en-US";
-    utt.rate = speechRate; utt.voice = voice;
+    utt.rate = speechRate; if (voice) utt.voice = voice;
     window.speechSynthesis.speak(utt);
   };
 
@@ -1123,10 +1257,18 @@ function App() {
 
       {/* Mic error — visible right above the input bar so the blink isn't silent */}
       {micError && !listening && (
-        <div style={{ margin: "0 12px 5px", padding: "8px 11px", background: "#FDE8E0", border: `1px solid #E89B7D`, borderRadius: 9, fontSize: 11.5, color: "#B8441F", lineHeight: 1.45, display: "flex", alignItems: "flex-start", gap: 7 }}>
-          <span style={{ fontSize: 13 }}>🎙️</span>
-          <span style={{ flex: 1 }}>{micError}</span>
-          <button onClick={() => setMicError("")} style={{ fontSize: 13, color: "#B8441F", padding: "0 4px", lineHeight: 1 }}>×</button>
+        <div style={{ margin: "0 12px 5px", padding: "10px 12px", background: "#FDE8E0", border: `1px solid #E89B7D`, borderRadius: 9, fontSize: 11.5, color: "#B8441F", lineHeight: 1.5 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}>
+            <span style={{ fontSize: 13 }}>🎙️</span>
+            <span style={{ flex: 1, whiteSpace: "pre-wrap" }}>{micError}</span>
+            <button onClick={() => setMicError("")} style={{ fontSize: 13, color: "#B8441F", padding: "0 4px", lineHeight: 1 }}>×</button>
+          </div>
+          {HAS_SR && (
+            <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
+              <button onClick={() => { setMicError(""); startListening(); }} style={{ fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 7, background: c.primary, color: "#fff" }}>↻ Retry mic</button>
+              <button onClick={() => location.reload()} style={{ fontSize: 11, fontWeight: 600, padding: "5px 10px", borderRadius: 7, background: "#fff", color: "#B8441F", border: "1px solid #E89B7D" }}>⟳ Hard refresh</button>
+            </div>
+          )}
         </div>
       )}
 
